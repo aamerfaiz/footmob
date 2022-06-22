@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import './App.css';
 
 
-import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword, addDoc, getDocs } from "firebase/auth";
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import 'firebase/compat/firestore';
@@ -37,11 +37,14 @@ function App() {
   return (
     <div className="App">
       <header>
-        <h1>⚛️🔥💬</h1>
-        <SignOut />
+        <span>{auth.currentUser ? <span>{auth.currentUser.email}</span> : <span>dsads</span>} </span>
+
+          <img src={'./images/simslogo.png'} />
+          <SignOut />
       </header>
 
       <section>
+
         {user ? <ChatRoom /> : <SignIn />}
 
       </section>
@@ -52,43 +55,51 @@ function App() {
 
 function SignIn() {
 
-  const [email,setEmail] = useState("");
-  const [password,setPassword] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   const [invalid, setinvalid] = useState("");
- 
- const signin = ()=> signInWithEmailAndPassword(auth, email,password )
-  .then((userCredential) => {
-    // Signed in 
-    console.log(userCredential,"--------------------")
-    const user = userCredential.user;
-    console.log(user,"++++++++++++++++");
-    // ...
-  })
-  .catch((error) => {
-    const errorCode = error.code;
-    console.log(errorCode,"aamer")
-    if(errorCode == "auth/wrong-password"){
-      setinvalid("Invalid Password");
-    }
-    else{
-      setinvalid("User does not Exist");
-    }
-    const errorMessage = error.message;
-  });
 
+  const signin = () => signInWithEmailAndPassword(auth, email, password)
+    .then((userCredential) => {
+      // Signed in 
+      // firestore.collection("users").doc(userCredential.uid).set
+      console.log(userCredential, "--------------------")
+      const user = userCredential.user;
+      console.log(user, "++++++++++++++++");
+      
+      // ...
+    })
+    .catch((error) => {
+      const errorCode = error.code;
+      console.log(errorCode, "aamer")
+      if (errorCode == "auth/wrong-password") {
+        setinvalid("Invalid Password");
+      }
+      else {
+        setinvalid("User does not Exist");
+      }
+      const errorMessage = error.message;
+    });
+
+
+    
   return (
     <>
       <form className='loginform'>
-        <input type="text" onChange={(e)=>{setEmail(e.target.value)}}></input>
-        <input type="password" onChange={(e)=>{setPassword(e.target.value)}}></input>
+        <input type="text" onChange={(e) => { setEmail(e.target.value) }}></input>
+        <input type="password" onChange={(e) => { setPassword(e.target.value) }}></input>
       </form>
       <div className="warning">{invalid}</div>
       <button className="sign-in" onClick={signin}>Sign in </button>
+      <button className="sign-in" onClick={signin}>Sign up </button>
     </>
   )
 
 }
+
+console.log(auth.currentUser);
+
 
 function SignOut() {
   return auth.currentUser && (
@@ -98,11 +109,17 @@ function SignOut() {
 
 
 function ChatRoom() {
-  const dummy = useRef();
-  const messagesRef = firestore.collection('messages');
-  
 
-  const query = messagesRef.orderBy('createdAt').limit(25);
+  const dummy = useRef();
+  function something(){
+    setTimeout(() => { dummy.current.scrollIntoView({ behavior: 'smooth' }); }, 0);
+
+  }
+  something();
+  const messagesRef = firestore.collection('messages');
+
+
+  const query = messagesRef.orderBy('createdAt');
 
   const [messages] = useCollectionData(query, { idField: 'id' });
 
@@ -112,21 +129,22 @@ function ChatRoom() {
   const sendMessage = async (e) => {
     e.preventDefault();
 
-    const { uid, photoURL } = auth.currentUser;
+    const { uid } = auth.currentUser;
 
     await messagesRef.add({
       text: formValue,
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      uid,
-      photoURL
+      uid
     })
 
     setFormValue('');
-    dummy.current.scrollIntoView({ behavior: 'smooth' });
+    setTimeout(() => { dummy.current.scrollIntoView({ behavior: 'smooth' }); }, 0)
+
+
   }
 
   return (<>
-    <main>
+    <main className='chatroom'>
 
       {messages && messages.map(msg => <ChatMessage key={msg.id} message={msg} />)}
 
@@ -134,12 +152,11 @@ function ChatRoom() {
 
     </main>
 
-    <form onSubmit={sendMessage}>
+    <form className='chatinput' onSubmit={sendMessage}>
 
-      <input value={formValue} onChange={(e) => setFormValue(e.target.value)} placeholder="say something nice" />
+      <input value={formValue} onChange={(e) => setFormValue(e.target.value)} placeholder="CHAT HERE" />
 
-      <button type="submit" disabled={!formValue}>🕊️</button>
-
+      <button type="submit" disabled={!formValue}>ENTER</button>
     </form>
   </>)
 }
@@ -154,9 +171,19 @@ function ChatMessage(props) {
 
   return (<>
     <div className={`message ${messageClass}`}>
-      <img src={photoURL || 'https://api.adorable.io/avatars/23/abott@adorable.png'} />
-      <p>{text}</p>
+
+      <div className='sender'>
+        <div className='imagesender'>
+          <img src={photoURL || './images/usericon.png'} />
+        </div>
+        <div className='messagesender'>
+          <span>{auth.currentUser.displayName || auth.currentUser.email}</span>
+          <p>{text}</p>
+
+        </div>
+      </div>
     </div>
+
   </>)
 }
 
